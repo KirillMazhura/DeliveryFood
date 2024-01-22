@@ -1,28 +1,33 @@
 'use strict';
 import Swiper from 'https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.mjs'
 const cartButton = document.querySelector("#cart-button"),
-    modal = document.querySelector(".modal"),
-    close = document.querySelector(".close"),
-    buttonAuth = document.querySelector(".button-auth"),
-    modalAuth = document.querySelector(".modal-auth"),
-    closeAuth = document.querySelector(".close-auth"),
-    logInForm = document.querySelector("#logInForm"),
-    loginInput = document.querySelector("#login"),
-    userName = document.querySelector(".user-name"),
-    buttonOut = document.querySelector(".button-out"),
-    cardsRestaurants = document.querySelector(".cards-restaurants"),
-    containerPromo = document.querySelector(".container-promo"),
-    restaurants = document.querySelector(".restaurants"),
-    menu = document.querySelector(".menu"),
-    logo = document.querySelector(".logo"),
-    cardsMenu = document.querySelector(".cards-menu"),
-    restaurantTitle = document.querySelector(".restaurant-title"),
-    rating = document.querySelector(".rating"),
-    minPrice = document.querySelector(".price"),
-    category = document.querySelector(".category"),
-    inputSearch = document.querySelector(".input-search")
+modal = document.querySelector(".modal"),
+close = document.querySelector(".close"),
+buttonAuth = document.querySelector(".button-auth"),
+modalAuth = document.querySelector(".modal-auth"),
+closeAuth = document.querySelector(".close-auth"),
+logInForm = document.querySelector("#logInForm"),
+loginInput = document.querySelector("#login"),
+userName = document.querySelector(".user-name"),
+buttonOut = document.querySelector(".button-out"),
+ cardsRestaurants = document.querySelector(".cards-restaurants"),
+containerPromo = document.querySelector(".container-promo"),
+restaurants = document.querySelector(".restaurants"),
+menu = document.querySelector(".menu"),
+logo = document.querySelector(".logo"),
+cardsMenu = document.querySelector(".cards-menu"),
+restaurantTitle = document.querySelector(".restaurant-title"),
+rating = document.querySelector(".rating"),
+minPrice = document.querySelector(".price"),
+category = document.querySelector(".category"),
+inputSearch = document.querySelector(".input-search");
+const modalBody = document.querySelector(".modal-body");
+const modalPrice = document.querySelector('.modal-pricetag');
+const buttonClearCart = document.querySelector('.clear-cart');
 
 let login = localStorage.getItem("logName");
+
+const cart = [];
 
 const getData = async function (url) {
     const response = await fetch(url);
@@ -75,7 +80,8 @@ function authorized() {
 
         buttonAuth.style.display = "";
         userName.style.display = "";
-        buttonOut.style.display = "";
+        buttonOut.style.display = "flex";
+        cartButton.style.display = "flex";
         buttonOut.removeEventListener("click", logOut);
         checkAuth();
         returnMain();
@@ -89,7 +95,6 @@ function authorized() {
     userName.style.display = "inline";
     buttonOut.style.display = "flex";
     cartButton.style.display = "flex";
-
     buttonOut.addEventListener("click", logOut);
 
 }
@@ -165,7 +170,7 @@ function createCardRestaurant({ image, kitchen, name, price, stars,
 function createCardGood({ description, image, name, price, id }) {
     const card = document.createElement("div");
     card.className = "card";
-
+    card.id = id;
     card.insertAdjacentHTML("beforeend", `
 		<img src="${image}" alt="${name}" class="card-image"/>
 		<div class="card-text">
@@ -222,22 +227,107 @@ function openGoods(event) {
 
 
 
-
-
+function addToCart(event) {
+    const target = event.target;
+    const buttonAddToCard = target.closest('.button-add-cart')
+    if(buttonAddToCard) {
+        const card = target.closest('.card')
+        const title = card.querySelector('.card-title-reg').textContent
+        const cost = card.querySelector('.card-price').textContent
+        const id = buttonAddToCard.id
+        const food = cart.find(function(item) {
+            return item.id === id;
+        })
+        if(food) {
+            food.count++;
+        } else {
+            cart.push({
+                id,
+                title,
+                cost,
+                count: 1
+            });
+        }
+        // console.log(food)
+        console.log(cart)
+    }
+}
+function renderCart() {
+    modalBody.textContent = '';
+    cart.forEach(function({id, title, cost, count}) {
+        const itemCart = `
+        <div class="food-row">
+            <span class="food-name">${title}</span>
+            <strong class="food-price">${cost}</strong>
+            <div class="food-counter">
+                <button class="counter-button counter-minus" data-id=${id}>-</button>
+                <span class="counter">${count}</span>
+                <button class="counter-button counter-plus" data-id=${id}>+</button>
+            </div>
+        </div>
+        `;
+        modalBody.insertAdjacentHTML('afterbegin', itemCart)
+    })
+    const totalPrice = cart.reduce(function(result, item){
+        return result + (parseFloat(item.cost)*item.count);
+    }, 0)
+    modalPrice.textContent = totalPrice;
+}
+function changeCount(event) {
+    const target = event.target;
+    if(target.classList.contains('counter-button')) {
+        const food = cart.find(function(item) {
+            return item.id === target.dataset.id;
+        })
+        if (target.classList.contains('counter-minus')) {
+            food.count--;
+            if(food.count===0) {
+                cart.splice(cart.indexOf(food), 1);
+            }
+        }
+        if (target.classList.contains('counter-plus')) food.count++;
+        renderCart();
+    }
+}
+//     if (target.classList.contains('counter-minus')){
+    
+//         const food = cart.find(function(item) {
+//             return item.id === target.dataset.id;
+//         })
+//         food.count--;
+//         renderCart();
+//     }
+//     if (target.classList.contains('counter-plus')){
+    
+//         const food = cart.find(function(item) {
+//             return item.id === target.dataset.id;
+//         })
+//         food.count++;
+//         renderCart();
+//     }
+// }
 function init() {
     getData("./db/partners.json").then(function (data) {
         data.forEach(createCardRestaurant);
     });
 
+    buttonClearCart.addEventListener('click', function(){
+        cart.length = 0;
+        renderCart();
+    })
+
+    modalBody.addEventListener('click', changeCount)
+
     cardsRestaurants.addEventListener("click", openGoods);
 
     logo.addEventListener("click", returnMain);
 
+    cardsMenu.addEventListener('click', addToCart);
 
     cartButton.addEventListener("click", function () {
+        renderCart();
         toggleModal();
     });
-
 
     close.addEventListener("click", toggleModal);
 
